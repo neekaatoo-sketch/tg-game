@@ -154,6 +154,9 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
       cursor: pointer;
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .card:active {
@@ -165,6 +168,19 @@
       height: 100%;
       object-fit: cover;
       display: block;
+      animation: fadeIn 0.25s ease-in;
+    }
+
+    .card-placeholder {
+      color: #555;
+      font-size: 12px;
+      text-align: center;
+      padding: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .message {
@@ -309,15 +325,38 @@
         }
 
         status.textContent = `Фото: ${photos.length}`;
-        gallery.innerHTML = photos.map(file => {
-          // ngrok-skip-browser-warning в параметрах запроса обходит страницу-заглушку ngrok
-          const imgUrl = `${SERVER_URL}/photos/${encodeURIComponent(file)}?key=${encodeURIComponent(savedPass)}&ngrok-skip-browser-warning=true`;
-          return `
-            <div class="card" onclick="openModal('${imgUrl}')">
-              <img src="${imgUrl}" alt="${file}" loading="lazy">
-            </div>
-          `;
-        }).join('');
+        
+        // Создаем каркас карточек с плейсхолдерами
+        gallery.innerHTML = photos.map((file, idx) => `
+          <div class="card" id="card-${idx}">
+            <span class="card-placeholder">Загрузка...</span>
+          </div>
+        `).join('');
+
+        // Загружаем каждое фото напрямую через Blob в обход заглушки ngrok
+        photos.forEach(async (file, idx) => {
+          try {
+            const photoRes = await fetch(`${SERVER_URL}/photos/${encodeURIComponent(file)}`, {
+              headers: {
+                'ngrok-skip-browser-warning': 'true',
+                'X-Auth-Token': savedPass
+              }
+            });
+
+            if (!photoRes.ok) return;
+
+            const blob = await photoRes.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const card = document.getElementById(`card-${idx}`);
+
+            if (card) {
+              card.onclick = () => openModal(objectUrl);
+              card.innerHTML = `<img src="${objectUrl}" alt="${file}">`;
+            }
+          } catch (err) {
+            console.error('Ошибка загрузки фото:', file, err);
+          }
+        });
 
       } catch (err) {
         console.error(err);
