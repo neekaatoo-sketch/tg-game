@@ -3,21 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Фотогалерея</title>
+  <title>Приватная фотогалерея</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: #121212;
       color: #eaeaea;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       padding: 20px;
     }
-
     header {
       max-width: 1200px;
       margin: 0 auto 24px;
@@ -27,12 +21,8 @@
       border-bottom: 1px solid #2a2a2a;
       padding-bottom: 16px;
     }
-
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-    }
-
+    h1 { font-size: 24px; font-weight: 600; }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
     .status {
       font-size: 14px;
       color: #a0a0a0;
@@ -40,7 +30,56 @@
       padding: 6px 12px;
       border-radius: 8px;
     }
+    .logout-btn {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #eaeaea;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .logout-btn:hover { background: #383838; }
 
+    /* Окно авторизации */
+    #auth-box {
+      max-width: 340px;
+      margin: 80px auto;
+      background: #1c1c1c;
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }
+    #auth-box h2 { font-size: 20px; margin-bottom: 8px; }
+    #auth-box p { font-size: 13px; color: #888; margin-bottom: 20px; }
+    #auth-box input {
+      width: 100%;
+      padding: 12px;
+      background: #121212;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 15px;
+      margin-bottom: 14px;
+      outline: none;
+    }
+    #auth-box input:focus { border-color: #0070f3; }
+    #auth-box button {
+      width: 100%;
+      padding: 12px;
+      background: #0070f3;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #auth-box button:hover { background: #005cd4; }
+    .auth-error { color: #ff5555; font-size: 13px; margin-top: 12px; display: none; }
+
+    /* Галерея */
     .gallery {
       max-width: 1200px;
       margin: 0 auto;
@@ -48,7 +87,6 @@
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 16px;
     }
-
     .card {
       background: #1c1c1c;
       border-radius: 12px;
@@ -56,30 +94,13 @@
       aspect-ratio: 1 / 1;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.2s ease;
     }
+    .card:hover { transform: translateY(-4px); }
+    .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .message { text-align: center; padding: 60px 20px; color: #888; grid-column: 1 / -1; font-size: 16px; }
 
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
-    }
-
-    .card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .message {
-      text-align: center;
-      padding: 60px 20px;
-      color: #888;
-      grid-column: 1 / -1;
-      font-size: 16px;
-    }
-
-    /* Модальное окно для полноэкранного просмотра */
+    /* Модалка для зума */
     .modal {
       display: none;
       position: fixed;
@@ -89,59 +110,102 @@
       align-items: center;
       z-index: 1000;
     }
-
-    .modal img {
-      max-width: 90vw;
-      max-height: 90vh;
-      object-fit: contain;
-      border-radius: 8px;
-    }
+    .modal img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 8px; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Локальный альбом</h1>
-    <div id="status" class="status">Подключение...</div>
-  </header>
+  <div id="auth-box">
+    <h2>Вход в альбом</h2>
+    <p>Доступ ограничен владельцем</p>
+    <input type="password" id="pass-input" placeholder="Введите пароль">
+    <button type="button" onclick="submitPassword()">Войти</button>
+    <div id="auth-error" class="auth-error">Неверный пароль</div>
+  </div>
 
-  <main id="gallery" class="gallery">
-    <div class="message">Загрузка фотографий с компьютера...</div>
-  </main>
+  <div id="app" style="display: none;">
+    <header>
+      <h1>Локальный альбом</h1>
+      <div class="header-actions">
+        <div id="status" class="status">Загрузка...</div>
+        <button class="logout-btn" onclick="logout()">Выйти</button>
+      </div>
+    </header>
+
+    <main id="gallery" class="gallery">
+      <div class="message">Загрузка фотографий...</div>
+    </main>
+  </div>
 
   <div id="modal" class="modal" onclick="this.style.display='none'">
     <img id="modal-img" src="" alt="Full view">
   </div>
 
   <script>
-    // Вставь сюда свою ссылку из ngrok (без слеша на конце):
     const SERVER_URL = "https://lugged-outweigh-sharpness.ngrok-free.dev";
 
+    function submitPassword() {
+      const pass = document.getElementById('pass-input').value.trim();
+      if (!pass) return;
+      localStorage.setItem('gallery_secret_pass', pass);
+      loadPhotos();
+    }
+
+    function logout() {
+      localStorage.removeItem('gallery_secret_pass');
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('auth-box').style.display = 'block';
+      document.getElementById('pass-input').value = '';
+    }
+
     async function loadPhotos() {
+      const savedPass = localStorage.getItem('gallery_secret_pass');
+      const authBox = document.getElementById('auth-box');
+      const authError = document.getElementById('auth-error');
+      const app = document.getElementById('app');
       const gallery = document.getElementById('gallery');
       const status = document.getElementById('status');
 
+      if (!savedPass) {
+        authBox.style.display = 'block';
+        app.style.display = 'none';
+        return;
+      }
+
       try {
-        // ngrok требует заголовок ngrok-skip-browser-warning при бесплатных запросах
         const res = await fetch(`${SERVER_URL}/api/photos`, {
           headers: {
-            'ngrok-skip-browser-warning': 'true'
+            'ngrok-skip-browser-warning': 'true',
+            'X-Auth-Token': savedPass
           }
         });
+
+        if (res.status === 401) {
+          authBox.style.display = 'block';
+          app.style.display = 'none';
+          authError.style.display = 'block';
+          localStorage.removeItem('gallery_secret_pass');
+          return;
+        }
 
         if (!res.ok) throw new Error(`Ошибка HTTP: ${res.status}`);
 
         const photos = await res.json();
+        
+        // Успешная авторизация
+        authBox.style.display = 'none';
+        authError.style.display = 'none';
+        app.style.display = 'block';
 
         if (!photos.length) {
-          gallery.innerHTML = '<div class="message">В папке нет подходящих картинок</div>';
+          gallery.innerHTML = '<div class="message">В папке нет картинок</div>';
           status.textContent = 'Пусто';
           return;
         }
 
         status.textContent = `Фотографий: ${photos.length}`;
         gallery.innerHTML = photos.map(file => {
-          const imgUrl = `${SERVER_URL}/photos/${encodeURIComponent(file)}`;
+          const imgUrl = `${SERVER_URL}/photos/${encodeURIComponent(file)}?key=${encodeURIComponent(savedPass)}`;
           return `
             <div class="card" onclick="openModal('${imgUrl}')">
               <img src="${imgUrl}" alt="${file}" loading="lazy">
@@ -151,18 +215,17 @@
 
       } catch (err) {
         console.error(err);
-        gallery.innerHTML = '<div class="message">Не удалось подключиться к ПК.<br>Проверь, запущены ли server.py и ngrok.</div>';
-        status.textContent = 'Офлайн';
+        alert('Не удалось подключиться к серверу на ПК. Проверьте ngrok и server.py');
       }
     }
 
     function openModal(src) {
       const modal = document.getElementById('modal');
-      const modalImg = document.getElementById('modal-img');
-      modalImg.src = src;
+      document.getElementById('modal-img').src = src;
       modal.style.display = 'flex';
     }
 
+    // Проверяем авторизацию при открытии страницы
     loadPhotos();
   </script>
 </body>
