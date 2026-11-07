@@ -1,139 +1,169 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<!-- Блокируем нежелательный зум при быстрых тапах -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Мини-кликер — HTMLBubbles test</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Фотогалерея</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-<!-- Подключение официального SDK Telegram -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+    body {
+      background: #121212;
+      color: #eaeaea;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+    }
 
-<style>
-  * { 
-    box-sizing: border-box;
-    /* Убираем синюю рамку подсветки при тапе на мобилках */
-    -webkit-tap-highlight-color: transparent;
-  }
+    header {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 16px;
+    }
 
-  body {
-    margin: 0; 
-    min-height: 100vh; 
-    display: grid; 
-    place-items: center;
-    background: #171717; 
-    color: #f5f0e6;
-    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
-    
-    /* Запрещаем случайное выделение текста и паразитный скролл при кликах */
-    user-select: none;
-    -webkit-user-select: none;
-    overflow: hidden;
-    touch-action: none;
-  }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
 
-  .card {
-    width: min(100% - 24px, 360px); 
-    padding: 24px;
-    border: 1px solid #66502a; 
-    border-radius: 22px;
-    background: linear-gradient(145deg,#28251f,#191919);
-    text-align: center; 
-    box-shadow: 0 18px 50px #0008;
-  }
+    .status {
+      font-size: 14px;
+      color: #a0a0a0;
+      background: #1e1e1e;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
 
-  .eyebrow { color: #c6a15b; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; }
-  h1 { margin: 8px 0 4px; font-size: 25px; }
-  .sub { margin: 0 0 22px; color: #aaa39a; font-size: 13px; }
-  .score { font-size: 64px; font-weight: 750; line-height: 1.15; margin: 12px 0 18px; font-variant-numeric: tabular-nums; }
-  
-  button {
-    border: 0; 
-    border-radius: 14px; 
-    padding: 14px 18px;
-    font: inherit; 
-    font-weight: 700; 
-    cursor: pointer;
-    /* Убираем 300мс задержку двойного тапа на смартфонах */
-    touch-action: manipulation;
-  }
+    .gallery {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
 
-  #plus { width: 100%; color: #211a0d; background: #d7b46b; font-size: 18px; }
-  #plus:active { transform: scale(.98); background: #edcf8b; }
-  .bottom { display: flex; gap: 10px; margin-top: 10px; }
-  .bottom button { flex: 1; color: #e8dfcf; background: #39352e; }
-  .bottom button:active { transform: scale(.98); opacity: .9; }
-  .hint { color: #8f897f; font-size: 12px; margin: 18px 0 0; }
-  .pop { animation: pop .16s ease-out; }
-  @keyframes pop { 50% { transform: scale(1.13); } }
-</style>
+    .card {
+      background: #1c1c1c;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 1 / 1;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .message {
+      text-align: center;
+      padding: 60px 20px;
+      color: #888;
+      grid-column: 1 / -1;
+      font-size: 16px;
+    }
+
+    /* Модальное окно для полноэкранного просмотра */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 <body>
-  <main class="card">
-    <div class="eyebrow">HTMLBubbles · тест</div>
-    <h1 id="user-greeting">Золотой кликер</h1>
-    <p class="sub">Проверяем HTML, CSS и JavaScript</p>
-    <div id="score" class="score" aria-live="polite">0</div>
-    <button id="plus" type="button">＋ Нажми меня</button>
-    <div class="bottom">
-      <button id="minus" type="button">−1</button>
-      <button id="reset" type="button">Сбросить</button>
-    </div>
-    <p class="hint">Каждое нажатие меняет счётчик</p>
+
+  <header>
+    <h1>Локальный альбом</h1>
+    <div id="status" class="status">Подключение...</div>
+  </header>
+
+  <main id="gallery" class="gallery">
+    <div class="message">Загрузка фотографий с компьютера...</div>
   </main>
 
-<script>
-(() => {
-  // Инициализация Telegram WebApp API
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-    
-    // Подставляем имя пользователя из Telegram, если доступно
-    const user = tg.initDataUnsafe?.user;
-    if (user?.first_name) {
-      document.getElementById('user-greeting').textContent = `Кликер, ${user.first_name}!`;
+  <div id="modal" class="modal" onclick="this.style.display='none'">
+    <img id="modal-img" src="" alt="Full view">
+  </div>
+
+  <script>
+    // Вставь сюда свою ссылку из ngrok (без слеша на конце):
+    const SERVER_URL = "https://ТВОЙ_АДРЕС.ngrok-free.app";
+
+    async function loadPhotos() {
+      const gallery = document.getElementById('gallery');
+      const status = document.getElementById('status');
+
+      try {
+        // ngrok требует заголовок ngrok-skip-browser-warning при бесплатных запросах
+        const res = await fetch(`${SERVER_URL}/api/photos`, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
+
+        if (!res.ok) throw new Error(`Ошибка HTTP: ${res.status}`);
+
+        const photos = await res.json();
+
+        if (!photos.length) {
+          gallery.innerHTML = '<div class="message">В папке нет подходящих картинок</div>';
+          status.textContent = 'Пусто';
+          return;
+        }
+
+        status.textContent = `Фотографий: ${photos.length}`;
+        gallery.innerHTML = photos.map(file => {
+          const imgUrl = `${SERVER_URL}/photos/${encodeURIComponent(file)}`;
+          return `
+            <div class="card" onclick="openModal('${imgUrl}')">
+              <img src="${imgUrl}" alt="${file}" loading="lazy">
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        console.error(err);
+        gallery.innerHTML = '<div class="message">Не удалось подключиться к ПК.<br>Проверь, запущены ли server.py и ngrok.</div>';
+        status.textContent = 'Офлайн';
+      }
     }
-  }
 
-  // Функция тактильного отклика на смартфоне
-  function vibrate(type = 'light') {
-    if (tg?.HapticFeedback) {
-      tg.HapticFeedback.impactOccurred(type);
+    function openModal(src) {
+      const modal = document.getElementById('modal');
+      const modalImg = document.getElementById('modal-img');
+      modalImg.src = src;
+      modal.style.display = 'flex';
     }
-  }
 
-  let count = 0;
-  const score = document.getElementById('score');
-
-  function render() {
-    score.textContent = String(count);
-    score.classList.remove('pop');
-    void score.offsetWidth;
-    score.classList.add('pop');
-  }
-
-  document.getElementById('plus').addEventListener('click', () => {
-    count++;
-    vibrate('medium');
-    render();
-  });
-
-  document.getElementById('minus').addEventListener('click', () => {
-    count--;
-    vibrate('light');
-    render();
-  });
-
-  document.getElementById('reset').addEventListener('click', () => {
-    count = 0;
-    if (tg?.HapticFeedback) {
-      tg.HapticFeedback.notificationOccurred('warning');
-    }
-    render();
-  });
-})();
-</script>
+    loadPhotos();
+  </script>
 </body>
 </html>
